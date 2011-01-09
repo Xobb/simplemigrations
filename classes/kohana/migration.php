@@ -105,6 +105,9 @@ class Kohana_Migration {
 		}
 	}
 
+	/**
+	 * Destructor.
+	 */
 	public function __destruct()
 	{
 		fclose(self::$output);
@@ -194,6 +197,10 @@ class Kohana_Migration {
 		}
 	}
 
+	/**
+	 * Sends the message to the system output
+	 * @param	string
+	 */
 	protected function output($message)
 	{
 		fwrite(self::$output, $message . PHP_EOL);
