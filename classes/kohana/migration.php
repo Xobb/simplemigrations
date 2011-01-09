@@ -66,6 +66,11 @@ class Kohana_Migration {
 	protected $migrations = array();
 
 	/**
+	 * Output stream
+	 */
+	protected static $output;
+
+	/**
 	 * Constructor. Throws the exception if migrations folder is not writable.
 	 * @param	string	Configuration group
 	 * @throws	Kohana_Exception
@@ -94,6 +99,15 @@ class Kohana_Migration {
 
 		// Read the list of all available migrations
 		$this->read_migrations();
+
+		if (self::$output == NULL) {
+			self::$output = fopen('php://stdout', 'w');
+		}
+	}
+
+	public function __destruct()
+	{
+		fclose(self::$output);
 	}
 
 	/**
@@ -113,17 +127,13 @@ class Kohana_Migration {
 
 		$current = $this->get_current_version();
 
-		// Retrieving the direction of the migrations
-		if ($current > $target) {
-			$direction = 'down';
-		} elseif ($current < $target) {
-			$direction = 'up';
-		} else {
+		// If target migration is the same as current one
+		if ($current == $target) {
 			return 'There is nothing to do!';
 		}
 
 		// Retrieving the migrations to be applied
-		$migrations = $this->get_migrations($direction, $current, $target);
+		$migrations = $this->get_migrations($current, $target);
 
 		foreach ($migrations as $version => $migration) {
 			// Apply the migration
@@ -137,10 +147,64 @@ class Kohana_Migration {
 	}
 
 	/**
+	 * Show the migration information
+	 * @param	array
+	 * @return	string
+	 */
+	public function information(array $params = NULL)
+	{
+		// Read the params to the variables
+		extract(Arr::extract($params, array('action', 'current', 'target')));
+
+		// Do the action
+		switch ($action) {
+			case 'diff':
+				$migrations = $this->get_migrations($current, $target);
+				$this->output('Diff between ' . $current . ' and ' . $target .'.');
+				$this->output('The queries in the following files will be executed in the order displayed:');
+				foreach ($migrations as $files) {
+					foreach ($files as $file) {
+						$this->output('  * ' . $file);
+					}
+				}
+			break;
+			case 'migration':
+				$this->output('Show the information of particular migration #' . $current);
+				$this->output('  * Up:');
+				foreach (Arr::path($this->migrations, 'up.'.$current) as $file) {
+					$this->output('     * ' . $file);
+				}
+				$this->output('  * Down:');
+				foreach (Arr::path($this->migrations, 'down.'.$current) as $file) {
+					$this->output('     * ' . $file);
+				}
+			break;
+			case 'status':
+			default:
+				$this->output('Database status:');
+				$latest = $this->get_newest_available_version();
+				$current = $this->get_current_version();
+				if ($current < $latest) {
+					$this->output('  * Database is currently at ' . $current . ' migration.');
+					$this->output('  * You can upgrade to ' . $latest . ' migration.');
+				} else {
+					$this->output('  * Database is up to date at ' . $current . ' migration.');
+				}
+			break;
+		}
+	}
+
+	protected function output($message)
+	{
+		fwrite(self::$output, $message . PHP_EOL);
+		fflush(self::$output);
+	}
+
+	/**
 	 * Get current schema version
 	 * @return	integer
 	 */
-	public function get_current_version()
+	protected function get_current_version()
 	{
 		return Arr::get($this->state, $this->db, 0);
 	}
@@ -212,18 +276,28 @@ class Kohana_Migration {
 	 * Get the ordered migration collection to be applied. Please note, that
 	 * when migrating down the migrations are returned in reverse order so that
 	 * they apply correctly.
-	 * @param	string
 	 * @param	integer
 	 * @param	integer
 	 * @return	array
 	 */
-	protected function get_migrations($direction, $current, $target)
+	protected function get_migrations($current, $target)
 	{
+		// Get the direction of the migration
+		if ($current > $target) {
+			$direction = 'down';
+		} elseif ($current < $target) {
+			$direction = 'up';
+		}
+
 		// The array of the migrations in between of current and target versions
 		$migrations = array();
 		foreach (Arr::get($this->migrations, $direction, array()) as $version => $migration) {
-			// The version must be in ($current, $target]
-			if ($version > $current AND $version <= $target) {
+			// The version must be in ($current; $target] when goin up
+			if ($direction == 'up' AND $version > $current AND $version <= $target) {
+				$migrations[$version] = $migration;
+			}
+			// The version must be in ($target; $current] when going down
+			if ($direction == 'down' AND $version > $target AND $version <= $current) {
 				$migrations[$version] = $migration;
 			}
 		}
