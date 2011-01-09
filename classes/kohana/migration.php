@@ -72,14 +72,15 @@ class Kohana_Migration {
 
 	/**
 	 * Constructor. Throws the exception if migrations folder is not writable.
-	 * @param	string	Configuration group
+	 * The parameter is the database group name to run migrations on.
+	 * @param	string
 	 * @throws	Kohana_Exception
 	 */
-	public function __construct($config = 'default')
+	public function __construct($database = NULL)
 	{
-		$this->config = Kohana::config('migrations')->$config;
-		// If database is not set in config we assume default
-		$this->db = Arr::get($this->config, 'database', 'default');
+		$this->config = Kohana::config('migrations')->as_array();
+		// If database is not provided we assume default from config
+		$this->db = ($database == NULL) ? $this->config['database'] : $database;
 
 		// Check if migrations folder is writable
 		if ( ! is_writable(APPPATH.'migrations'))
@@ -130,8 +131,12 @@ class Kohana_Migration {
 
 		$current = $this->get_current_version();
 
+		$this->output('====================================');
+		$this->output('Migrating from ' . $current . ' to ' . $target);
+
 		// If target migration is the same as current one
 		if ($current == $target) {
+			$this->output('There is nothing to do!');
 			return 'There is nothing to do!';
 		}
 
@@ -145,8 +150,12 @@ class Kohana_Migration {
 
 		$this->write_state();
 
-		return __('We have successfully migrated from ' . $current
+		$message = __('We have successfully migrated from ' . $current
 			. ' version to ' . $target . ' version.');
+
+		$this->output($message);
+
+		return $message;
 	}
 
 	/**
@@ -325,19 +334,25 @@ class Kohana_Migration {
 	 */
 	protected function apply_migration($version, array $files)
 	{
+		$this->output('###############################');
+		$this->output('Applying migration #' . $version);
 		$queries = $this->get_queries_from_files($files);
 		$db = Database::instance($this->db);
 		// Initiate database transaction for migration
+		$this->output('### Start database transaction:');
 		$db->query(NULL, 'START TRANSACTION');
 		try {
 			foreach ($queries as $query) {
 				if (trim($query) == '' OR trim($query) == PHP_EOL) {
 					continue;
 				}
+				$this->output(PHP_EOL . 'Executing the following query:');
+				$this->output(trim($query));
 				$db->query(NULL, trim($query));
 			}
-		} catch (Kohana_Exception $e) {
+		} catch (Database_Exception $e) {
 			// Rollback the migration
+			$this->output('### WARNING!!! LAST QUERY CAUSED ERROR. DOING THE ROLLBACK ###');
 			$db->query(NULL, 'ROLLBACK');
 			// Save the migrations applied
 			$this->write_state();
@@ -346,6 +361,7 @@ class Kohana_Migration {
 		}
 		// Commit transaction
 		$db->query(NULL, 'COMMIT');
+		$this->output('### Commit database transaction.');
 
 		$this->set_current_version($version);
 	}
