@@ -71,14 +71,13 @@ class Kohana_Migration {
 	protected static $output;
 
 	/**
-	 * Constructor. Throws the exception if migrations folder is not writable.
-	 * The parameter is the database group name to run migrations on.
-	 * @param	string
-	 * @throws	Kohana_Exception
+	 *
+	 * @throws Kohana_Exception
+	 * @param string|null $database
 	 */
 	public function __construct($database = NULL)
 	{
-		$this->config = Kohana::config('migrations')->as_array();
+		$this->config = Kohana::$config->load('migrations')->as_array();
 		// If database is not provided we assume default from config
 		$this->db = ($database == NULL) ? $this->config['database'] : $database;
 
@@ -352,7 +351,7 @@ class Kohana_Migration {
 			}
 		} catch (Database_Exception $e) {
 			// Rollback the migration
-			$this->output('### WARNING!!! LAST QUERY CAUSED ERROR. DOING THE ROLLBACK ###');
+			$this->output('### WARNING!!! Last query caused error. rolling back ###');
 			$db->query(NULL, 'ROLLBACK');
 			// Save the migrations applied
 			$this->write_state();
