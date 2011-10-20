@@ -9,8 +9,8 @@ return array(
 	 */
 	'database' => 'default',
 	/**
-	 * The file that migration uses to store database versions.
+	 * The prefix of filename that migration uses to store database versions.
 	 * It will be located in APPPATH.migrations/ directory.
 	 */
-	'info_file' => '.version',
+	'prefix' => '.db',
 );
