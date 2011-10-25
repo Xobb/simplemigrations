@@ -14,14 +14,7 @@ class Simi_Version {
 
 	protected $migrations = array();
 
-	public function __construct($directory, Simi_Migrator $migrator)
-	{
-		$this->migrator = $migrator;
-		$this->name = pathinfo($directory, PATHINFO_FILENAME);
-		foreach ($directory as $file) {
-			$this->migrations[] = pathinfo($file, PATHINFO_FILENAME);
-		}
-	}
+
 
 	public function __get($key)
 	{

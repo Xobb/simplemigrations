@@ -53,23 +53,7 @@ class Simi_Migrator {
 	 */
 	public function apply($migration)
 	{
-		try {
-			// Start transaction
-			$this->db->begin();
-			// Execute the migration
-			$migration->set_db($this->db)->pre_up()->up()->post_up();
-			// Commit changes
-			$this->db->commit();
-			// Mark transaction as applied
-			$this->applied_migrations[] = $migration->get_name();
-			// Write down the migrations applied
-			$this->write_applied_migrations();
-		} catch (Kohana_Exception $e) {
-			// Rollback the transaction
-			$this->db->rollback();
-			// Rethrow Exception
-			throw $e;
-		}
+
 	}
 
 	/**

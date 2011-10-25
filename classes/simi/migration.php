@@ -8,18 +8,20 @@
  
 class Simi_Migration {
 
-	public static function factory($name, Simi_Version $version)
+	protected static $instances;
+
+	public static function instance($name)
 	{
-		require Kohana::find_file('migrations', $name);
-		$class_name = str_replace('/', '_', $name);
-		return new $class_name($version);
+		if (!array_key_exists($name, self::$instances)) {
+			$class_name = 'Migration_'.$name;
+			self::$instances[$name] = new $class_name;
+		}
+		return self::$instances[$name];
 	}
 
-	protected $version;
-
-	public function __construct(Simi_Version $version)
+	protected function __construct()
 	{
-		$this->version = $version;
+
 	}
 
 	public function set_db(Database $db)
@@ -32,8 +34,15 @@ class Simi_Migration {
 	{
 		$name = get_class($this);
 		$name = explode('_', $name);
-		$name = array_pop($name);
-		return $this->version->get_name() . '/' . $name;
+		array_shit($name);
+		return implode('/', $name);
+	}
+
+	public function get_version()
+	{
+		$version = get_class($this);
+		$version = explode('_', $version);
+		return Arr::get($version, 1);
 	}
 
 	public function pre_up()

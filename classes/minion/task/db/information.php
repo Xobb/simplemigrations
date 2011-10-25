@@ -33,15 +33,11 @@
  * @package	Minion
  * @author Paul Chubatyy <xobb@citylance.biz>
  */
-class Minion_Task_Db_Information extends Minion_Task {
+class Minion_Task_Db_Information extends Minion_Task_Db {
 
 	protected $_config = array(
 		'database', 'action', 'current', 'target'
 	);
 
-	public function execute(array $params)
-	{
-		$migration = new Migration(Arr::get($params, 'database'));
-		$migration->information($params);
-	}
+
 }
